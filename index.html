@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendario Manutenzioni</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --border: #E8E4DC;
+    --text: #1A1814;
+    --text-muted: #8A8580;
+    --accent: #C84B2F;
+    --accent-light: #FAECEA;
+    --accent-dark: #9A3520;
+    --blue: #2563EB;
+    --blue-light: #EFF6FF;
+    --green: #16A34A;
+    --green-light: #F0FDF4;
+    --amber: #D97706;
+    --amber-light: #FFFBEB;
+    --red: #DC2626;
+    --red-light: #FEF2F2;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+    --radius: 10px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .app { min-height: 100vh; display: flex; flex-direction: column; }
+
+  .header {
+    background: var(--text);
+    color: #FFF;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-logo { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; display: flex; align-items: center; gap: 8px; }
+  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .role-badge { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); border-radius: 20px; padding: 3px 10px; font-size: 12px; color: #FFF; }
+
+  .tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--surface); padding: 0 24px; }
+  .tab { padding: 12px 16px; font-size: 13px; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text-muted); transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none; font-family: inherit; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .content { flex: 1; padding: 24px; max-width: 900px; margin: 0 auto; width: 100%; }
+
+  .login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg); }
+  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 40px; width: 360px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+  .login-logo { font-size: 22px; font-weight: 600; letter-spacing: -0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .login-sub { color: var(--text-muted); font-size: 13px; margin-bottom: 32px; }
+  .login-options { display: flex; flex-direction: column; gap: 12px; }
+  .login-btn { padding: 14px 20px; border-radius: var(--radius); border: 1.5px solid var(--border); background: var(--surface); cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 500; text-align: left; display: flex; align-items: center; gap: 12px; transition: all 0.15s; }
+  .login-btn:hover { border-color: var(--accent); background: var(--accent-light); }
+  .login-btn-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: var(--accent-light); }
+  .login-btn.manu .login-btn-icon { background: var(--blue-light); }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 200; }
+  .modal { background: var(--surface); border-radius: 14px; padding: 28px; width: 340px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
+  .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .modal p { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
+  .modal input, .modal textarea { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px; outline: none; transition: border-color 0.15s; }
+  .modal input:focus, .modal textarea:focus { border-color: var(--accent); }
+  .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .modal-error { color: var(--red); font-size: 12px; margin-top: 8px; }
+
+  .btn { padding: 9px 18px; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: 1.5px solid transparent; }
+  .btn-primary { background: var(--accent); color: #FFF; border-color: var(--accent); }
+  .btn-primary:hover { background: var(--accent-dark); }
+  .btn-ghost { background: transparent; color: var(--text-muted); border-color: var(--border); }
+  .btn-ghost:hover { background: var(--bg); }
+  .btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 6px; }
+
+  .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); }
+  .form-title { font-size: 16px; font-weight: 600; margin-bottom: 20px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-label { font-size: 12px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-input, .form-select, .form-textarea { padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px; outline: none; transition: border-color 0.15s; background: var(--surface); color: var(--text); }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+  .form-textarea { resize: vertical; min-height: 80px; }
+  .form-actions { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
+
+  .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; }
+  .badge-alta { background: var(--red-light); color: var(--red); }
+  .badge-media { background: var(--amber-light); color: var(--amber); }
+  .badge-bassa { background: var(--green-light); color: var(--green); }
+  .badge-aperto { background: var(--blue-light); color: var(--blue); }
+  .badge-schedulato { background: var(--amber-light); color: var(--amber); }
+  .badge-chiuso { background: var(--green-light); color: var(--green); }
+
+  .tickets-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .tickets-title { font-size: 16px; font-weight: 600; }
+  .tickets-count { font-size: 13px; color: var(--text-muted); }
+  .ticket-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; box-shadow: var(--shadow); transition: all 0.15s; }
+  .ticket-item:hover { border-color: #C8C4BC; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  .ticket-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; gap: 12px; }
+  .ticket-id { font-family: monospace; font-size: 11px; color: var(--text-muted); }
+  .ticket-desc { font-size: 14px; font-weight: 500; margin: 4px 0; }
+  .ticket-meta { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
+  .ticket-badges { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .ticket-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+  .calendar-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .cal-title { font-size: 15px; font-weight: 600; }
+  .cal-btn { background: none; border: 1px solid var(--border); border-radius: 6px; width: 32px; height: 32px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+  .cal-btn:hover { background: var(--bg); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cal-day-name { text-align: center; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 0; }
+  .cal-cell { min-height: 64px; border-radius: 6px; padding: 6px; font-size: 12px; background: transparent; transition: background 0.12s; }
+  .cal-cell.other-month { opacity: 0.3; }
+  .cal-cell.today { background: var(--accent-light); }
+  .cal-cell.has-events:hover { background: var(--bg); cursor: pointer; }
+  .cal-num { font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 3px; }
+  .cal-cell.today .cal-num { color: var(--accent); font-weight: 700; }
+  .cal-event { background: var(--blue); color: #FFF; border-radius: 3px; padding: 2px 5px; font-size: 10px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cal-event.alta { background: var(--red); }
+  .cal-event.media { background: var(--amber); }
+  .cal-event.bassa { background: var(--green); }
+  .cal-event.chiuso { background: #888; }
+
+  .empty-state { text-align: center; padding: 48px 24px; color: var(--text-muted); }
+  .empty-icon { font-size: 32px; margin-bottom: 12px; }
+  .section-gap { margin-top: 24px; }
+  .loading { text-align: center; padding: 40px; color: var(--text-muted); font-size: 13px; }
+  .form-row { display: flex; flex-direction: column; gap: 12px; }
+  .form-row .form-group { display: flex; flex-direction: column; gap: 6px; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--text); color: #FFF; padding: 12px 20px; border-radius: 10px; font-size: 13px; z-index: 300; animation: slideUp 0.2s ease; }
+  @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .content { padding: 16px; }
+    .header { padding: 0 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbyOsIvd3I0AlaKWiwoCmTnW7yWWL5U87T2k44bcHPUzrAGS79fcshq68nW26xSuCBL1/exec';
+const PASS_RESP = 'resp2024';
+const PASS_MANU = 'manu2024';
+
+let state = {
+  auth: null,
+  tickets: [],
+  loading: false,
+  tab: 'tickets',
+  modal: null,
+  selectedTicket: null,
+  calMonth: new Date().getMonth(),
+  calYear: new Date().getFullYear(),
+  pwdInput: '',
+  pwdError: '',
+  schedData: { data: '', manutentore: '', note: '' },
+  closeData: { noteChiusura: '' },
+};
+
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = !state.auth ? renderLogin() : renderMain();
+  attachEvents();
+}
+
+function renderLogin() {
+  return `
+    <div class="login-screen">
+      <div class="login-card">
+        <div class="login-logo"><div class="logo-dot"></div> Manutenzioni</div>
+        <div class="login-sub">Seleziona il tuo ruolo per accedere</div>
+        <div class="login-options">
+          <button class="login-btn resp" onclick="openLoginModal('responsabile')">
+            <div class="login-btn-icon">🏢</div>
+            <div><div style="font-weight:600">Responsabile</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px">Apertura ticket manutenzione</div></div>
+          </button>
+          <button class="login-btn manu" onclick="openLoginModal('manutentore')">
+            <div class="login-btn-icon">🔧</div>
+            <div><div style="font-weight:600">Manutentore</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px">Gestione e chiusura commesse</div></div>
+          </button>
+        </div>
+      </div>
+      ${state.modal ? renderPwdModal() : ''}
+    </div>`;
+}
+
+function renderPwdModal() {
+  const isResp = state.modal === 'login-responsabile';
+  return `
+    <div class="modal-overlay" onclick="closeModal()">
+      <div class="modal" onclick="event.stopPropagation()">
+        <h3>${isResp ? '🏢 Accesso Responsabile' : '🔧 Accesso Manutentore'}</h3>
+        <p>Inserisci la password per accedere all'area ${isResp ? 'responsabile' : 'manutentore'}</p>
+        <input type="password" id="pwd-input" placeholder="Password..." onkeydown="if(event.key==='Enter')submitPwd()" autofocus />
+        <div class="modal-error">${state.pwdError}</div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" onclick="closeModal()">Annulla</button>
+          <button class="btn btn-primary" onclick="submitPwd()">Accedi</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderMain() {
+  const isResp = state.auth === 'responsabile';
+  return `
+    <div class="header">
+      <div class="header-logo"><div class="logo-dot"></div> Calendario Manutenzioni</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="role-badge">${isResp ? '🏢 Responsabile' : '🔧 Manutentore'}</span>
+        <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px;color:rgba(255,255,255,0.6);border-color:rgba(255,255,255,0.2)" onclick="logout()">Esci</button>
+      </div>
+    </div>
+    <div class="tabs">
+      ${isResp ? `<button class="tab ${state.tab==='new'?'active':''}" onclick="setTab('new')">➕ Nuovo Ticket</button>` : ''}
+      <button class="tab ${state.tab==='tickets'?'active':''}" onclick="setTab('tickets')">📋 Ticket</button>
+      <button class="tab ${state.tab==='calendar'?'active':''}" onclick="setTab('calendar')">📅 Calendario</button>
+    </div>
+    <div class="content">
+      ${state.tab === 'new' ? renderNewTicket() : ''}
+      ${state.tab === 'tickets' ? renderTickets() : ''}
+      ${state.tab === 'calendar' ? renderCalendar() : ''}
+    </div>
+    ${state.modal === 'schedule' ? renderScheduleModal() : ''}
+    ${state.modal === 'close' ? renderCloseModal() : ''}`;
+}
+
+function renderNewTicket() {
+  const today = new Date().toISOString().split('T')[0];
+  return `
+    <div class="form-card">
+      <div class="form-title">📝 Apri Nuovo Ticket di Manutenzione</div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Descrizione problema *</label>
+          <textarea class="form-textarea" id="f-desc" placeholder="Descrivi il problema in dettaglio..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Priorità *</label>
+          <select class="form-select" id="f-priorita">
+            <option value="">Seleziona...</option>
+            <option value="Alta">🔴 Alta</option>
+            <option value="Media">🟡 Media</option>
+            <option value="Bassa">🟢 Bassa</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data richiesta</label>
+          <input type="date" class="form-input" id="f-data" value="${today}" />
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Note aggiuntive</label>
+          <textarea class="form-textarea" id="f-note" placeholder="Eventuali note aggiuntive..." style="min-height:60px"></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="render()">Cancella</button>
+        <button class="btn btn-primary" onclick="submitTicket()">Invia Ticket →</button>
+      </div>
+    </div>`;
+}
+
+function renderTickets() {
+  if (state.loading) return '<div class="loading">Caricamento ticket in corso...</div>';
+  const open = state.tickets.filter(t => t['Stato'] === 'Aperto');
+  const sched = state.tickets.filter(t => t['Stato'] === 'Schedulato');
+  const closed = state.tickets.filter(t => t['Stato'] === 'Chiuso');
+  const isManu = state.auth === 'manutentore';
+
+  const renderSection = (title, list, showEmpty) => {
+    if (list.length === 0 && !showEmpty) return '';
+    return `
+      <div class="tickets-header" style="margin-top:${title.includes('Aperti')?'0':'24px'}">
+        <div class="tickets-title">${title}</div>
+        <div class="tickets-count">${list.length} ticket</div>
+      </div>
+      ${list.length === 0
+        ? `<div style="color:var(--text-muted);font-size:13px;padding:12px 0 0">Nessun ticket in questa categoria</div>`
+        : list.map(t => renderTicket(t, isManu)).join('')}`;
+  };
+
+  return `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <button class="btn btn-ghost btn-sm" onclick="loadTickets()">↺ Aggiorna</button>
+    </div>
+    ${state.tickets.length === 0
+      ? `<div class="empty-state"><div class="empty-icon">📋</div><div style="font-size:15px">Nessun ticket presente</div><div style="font-size:13px;margin-top:4px">I ticket aperti appariranno qui</div></div>`
+      : renderSection('🔵 Aperti', open, true) + renderSection('🟡 Schedulati', sched, false) + renderSection('✅ Chiusi', closed, false)}`;
+}
+
+function renderTicket(t, isManu) {
+  const stato = t['Stato'] || 'Aperto';
+  const prio = (t['Priorità'] || '').toLowerCase();
+  const badgePrio = prio === 'alta' ? 'badge-alta' : prio === 'media' ? 'badge-media' : 'badge-bassa';
+  const badgeStato = stato === 'Aperto' ? 'badge-aperto' : stato === 'Schedulato' ? 'badge-schedulato' : 'badge-chiuso';
+  let actions = '';
+  if (isManu && stato === 'Aperto') actions = `<button class="btn btn-primary btn-sm" onclick="openSchedule('${t['ID']}')">📅 Schedula</button>`;
+  if (isManu && stato === 'Schedulato') actions = `<button class="btn btn-primary btn-sm" onclick="openClose('${t['ID']}')">✅ Chiudi Commessa</button><button class="btn btn-ghost btn-sm" onclick="openSchedule('${t['ID']}')">✏️ Modifica</button>`;
+  return `
+    <div class="ticket-item">
+      <div class="ticket-header">
+        <div style="flex:1">
+          <div class="ticket-id">${t['ID'] || ''}</div>
+          <div class="ticket-desc">${t['Descrizione'] || ''}</div>
+          <div class="ticket-meta" style="margin-top:6px">
+            ${t['Data Apertura'] ? `<span>📅 ${t['Data Apertura']}</span>` : ''}
+            ${t['Data Schedulata'] ? `<span>🗓 ${t['Data Schedulata']}</span>` : ''}
+            ${t['Manutentore'] ? `<span>👷 ${t['Manutentore']}</span>` : ''}
+            ${t['Data Chiusura'] ? `<span>✅ ${t['Data Chiusura']}</span>` : ''}
+          </div>
+          ${t['Note'] ? `<div style="margin-top:6px;font-size:12px;color:var(--text-muted);font-style:italic">📝 ${t['Note']}</div>` : ''}
+          ${t['Note Chiusura'] ? `<div style="margin-top:6px;font-size:12px;color:var(--green);font-style:italic">✅ ${t['Note Chiusura']}</div>` : ''}
+        </div>
+        <div class="ticket-badges">
+          ${prio ? `<span class="badge ${badgePrio}">${t['Priorità']}</span>` : ''}
+          <span class="badge ${badgeStato}">${stato}</span>
+        </div>
+      </div>
+      ${actions ? `<div class="ticket-actions">${actions}</div>` : ''}
+    </div>`;
+}
+
+function renderScheduleModal() {
+  return `
+    <div class="modal-overlay" onclick="closeModal()">
+      <div class="modal" onclick="event.stopPropagation()">
+        <h3>📅 Schedula Manutenzione</h3>
+        <p>Inserisci i dettagli per pianificare l'intervento</p>
+        <div class="form-row">
+          <div class="form-group">
+            <div class="form-label" style="margin-bottom:6px">Data intervento *</div>
+            <input type="date" class="form-input" style="width:100%" id="sched-data" />
+          </div>
+          <div class="form-group">
+            <div class="form-label" style="margin-bottom:6px">Nome manutentore *</div>
+            <input type="text" class="form-input" style="width:100%" id="sched-manu" placeholder="Es. Mario Rossi" />
+          </div>
+          <div class="form-group">
+            <div class="form-label" style="margin-bottom:6px">Note</div>
+            <textarea style="width:100%;min-height:60px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;outline:none;resize:vertical" id="sched-note" placeholder="Note sull'intervento..."></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" onclick="closeModal()">Annulla</button>
+          <button class="btn btn-primary" onclick="submitSchedule()">Conferma →</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderCloseModal() {
+  return `
+    <div class="modal-overlay" onclick="closeModal()">
+      <div class="modal" onclick="event.stopPropagation()">
+        <h3>✅ Chiudi Commessa</h3>
+        <p>Inserisci le note di chiusura per completare l'intervento</p>
+        <div class="form-group">
+          <div class="form-label" style="margin-bottom:6px">Note di chiusura *</div>
+          <textarea style="width:100%;min-height:80px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;outline:none;resize:vertical" id="close-note" placeholder="Descrivi il lavoro eseguito..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" onclick="closeModal()">Annulla</button>
+          <button class="btn btn-primary" onclick="submitClose()">Chiudi Commessa ✅</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderCalendar() {
+  const months = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const days = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+  const today = new Date();
+  const firstDay = new Date(state.calYear, state.calMonth, 1);
+  const lastDay = new Date(state.calYear, state.calMonth + 1, 0);
+  let startDow = firstDay.getDay() - 1; if (startDow < 0) startDow = 6;
+
+  const eventsByDate = {};
+  state.tickets.filter(t => t['Data Schedulata']).forEach(t => {
+    const d = t['Data Schedulata'];
+    if (!eventsByDate[d]) eventsByDate[d] = [];
+    eventsByDate[d].push(t);
+  });
+
+  let cells = '';
+  for (let i = 0; i < startDow; i++) cells += `<div class="cal-cell other-month"></div>`;
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    const dateStr = `${state.calYear}-${String(state.calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = today.getDate()===d && today.getMonth()===state.calMonth && today.getFullYear()===state.calYear;
+    const events = eventsByDate[dateStr] || [];
+    cells += `
+      <div class="cal-cell ${isToday?'today':''} ${events.length?'has-events':''}">
+        <div class="cal-num">${d}</div>
+        ${events.slice(0,2).map(t => `<div class="cal-event ${(t['Stato']||'').toLowerCase()==='chiuso'?'chiuso':(t['Priorità']||'').toLowerCase()}" title="${t['Descrizione']}">${(t['Descrizione']||'').substring(0,16)}${(t['Descrizione']||'').length>16?'...':''}</div>`).join('')}
+        ${events.length > 2 ? `<div style="font-size:10px;color:var(--text-muted)">+${events.length-2} altri</div>` : ''}
+      </div>`;
+  }
+
+  const monthTickets = state.tickets.filter(t => {
+    const d = t['Data Schedulata'] || '';
+    if (!d) return false;
+    const [y,m] = d.split('-');
+    return parseInt(m)-1 === state.calMonth && parseInt(y) === state.calYear;
+  });
+
+  return `
+    <div class="calendar-wrap">
+      <div class="cal-nav">
+        <button class="cal-btn" onclick="prevMonth()">‹</button>
+        <div class="cal-title">${months[state.calMonth]} ${state.calYear}</div>
+        <button class="cal-btn" onclick="nextMonth()">›</button>
+      </div>
+      <div class="cal-grid">
+        ${days.map(d=>`<div class="cal-day-name">${d}</div>`).join('')}
+        ${cells}
+      </div>
+    </div>
+    <div class="section-gap">
+      <div class="tickets-header">
+        <div class="tickets-title">🗓 Interventi del mese</div>
+        <div class="tickets-count">${monthTickets.length} interventi</div>
+      </div>
+      ${monthTickets.length === 0
+        ? `<div class="empty-state"><div class="empty-icon">📅</div><div>Nessun intervento schedulato questo mese</div></div>`
+        : monthTickets.map(t => renderTicket(t, state.auth==='manutentore')).join('')}
+    </div>`;
+}
+
+function openLoginModal(role) {
+  state.modal = 'login-' + role;
+  state.pwdError = '';
+  render();
+  setTimeout(() => { const el = document.getElementById('pwd-input'); if (el) el.focus(); }, 50);
+}
+
+function closeModal() {
+  state.modal = null;
+  state.selectedTicket = null;
+  render();
+}
+
+function submitPwd() {
+  const role = state.modal.replace('login-', '');
+  const pwd = document.getElementById('pwd-input')?.value || '';
+  const correct = role === 'responsabile' ? PASS_RESP : PASS_MANU;
+  if (pwd === correct) {
+    state.auth = role;
+    state.modal = null;
+    state.tab = role === 'responsabile' ? 'new' : 'tickets';
+    render();
+    loadTickets();
+  } else {
+    state.pwdError = 'Password errata. Riprova.';
+    render();
+    setTimeout(() => { const el = document.getElementById('pwd-input'); if (el) { el.focus(); el.select(); } }, 50);
+  }
+}
+
+function logout() { state.auth = null; state.tickets = []; state.modal = null; render(); }
+function setTab(tab) { state.tab = tab; render(); }
+function prevMonth() { if (state.calMonth===0){state.calMonth=11;state.calYear--;}else state.calMonth--; render(); }
+function nextMonth() { if (state.calMonth===11){state.calMonth=0;state.calYear++;}else state.calMonth++; render(); }
+
+async function loadTickets() {
+  state.loading = true; render();
+  try {
+    const res = await fetch(API_URL + '?action=getTickets');
+    const data = await res.json();
+    state.tickets = (data.tickets || []).filter(t => t['ID']);
+  } catch(e) { showToast('Errore nel caricamento. Riprova.'); }
+  state.loading = false; render();
+}
+
+async function submitTicket() {
+  const desc = document.getElementById('f-desc')?.value?.trim();
+  const priorita = document.getElementById('f-priorita')?.value;
+  const data = document.getElementById('f-data')?.value;
+  const note = document.getElementById('f-note')?.value?.trim();
+  if (!desc) { showToast('Inserisci una descrizione'); return; }
+  if (!priorita) { showToast('Seleziona la priorità'); return; }
+  try {
+    const res = await fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'addTicket', descrizione:desc, priorita, dataApertura:data, note }) });
+    const d = await res.json();
+    if (d.success) { showToast('✅ Ticket aperto!'); state.tab='tickets'; loadTickets(); }
+  } catch(e) { showToast('Errore. Riprova.'); }
+}
+
+function openSchedule(id) { state.selectedTicket = id; state.modal = 'schedule'; render(); }
+function openClose(id) { state.selectedTicket = id; state.modal = 'close'; render(); }
+
+async function submitSchedule() {
+  const data = document.getElementById('sched-data')?.value;
+  const manu = document.getElementById('sched-manu')?.value?.trim();
+  const note = document.getElementById('sched-note')?.value?.trim();
+  if (!data) { showToast('Seleziona una data'); return; }
+  if (!manu) { showToast('Inserisci il nome del manutentore'); return; }
+  try {
+    const res = await fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTicket', id:state.selectedTicket, stato:'Schedulato', dataSchedulata:data, manutentore:manu, noteChiusura:note }) });
+    const d = await res.json();
+    if (d.success) { showToast('📅 Intervento schedulato!'); closeModal(); loadTickets(); }
+  } catch(e) { showToast('Errore. Riprova.'); }
+}
+
+async function submitClose() {
+  const noteChiusura = document.getElementById('close-note')?.value?.trim();
+  if (!noteChiusura) { showToast('Inserisci le note di chiusura'); return; }
+  const today = new Date().toISOString().split('T')[0];
+  try {
+    const res = await fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'updateTicket', id:state.selectedTicket, stato:'Chiuso', noteChiusura, dataChiusura:today }) });
+    const d = await res.json();
+    if (d.success) { showToast('✅ Commessa chiusa!'); closeModal(); loadTickets(); }
+  } catch(e) { showToast('Errore. Riprova.'); }
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function attachEvents() {
+  document.addEventListener('keydown', e => { if (e.key==='Escape' && state.modal) closeModal(); }, { once: true });
+}
+
+render();
+</script>
+</body>
+</html>
