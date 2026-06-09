@@ -324,10 +324,10 @@ function renderTicket(t, isManu) {
           <div class="ticket-id">${t['ID'] || ''}</div>
           <div class="ticket-desc">${t['Descrizione'] || ''}</div>
           <div class="ticket-meta" style="margin-top:6px">
-            ${t['Data Apertura'] ? `<span>📅 ${t['Data Apertura']}</span>` : ''}
-            ${t['Data Schedulata'] ? `<span>🗓 ${t['Data Schedulata']}</span>` : ''}
+            ${t['Data Apertura'] ? `<span>📅 ${formatDate(t['Data Apertura'])}</span>` : ''}
+            ${t['Data Schedulata'] ? `<span>🗓 Schedulato: ${formatDate(t['Data Schedulata'])}</span>` : ''}
             ${t['Manutentore'] ? `<span>👷 ${t['Manutentore']}</span>` : ''}
-            ${t['Data Chiusura'] ? `<span>✅ ${t['Data Chiusura']}</span>` : ''}
+            ${t['Data Chiusura'] ? `<span>✅ Chiuso: ${formatDate(t['Data Chiusura'])}</span>` : ''}
           </div>
           ${t['Note'] ? `<div style="margin-top:6px;font-size:12px;color:var(--text-muted);font-style:italic">📝 ${t['Note']}</div>` : ''}
           ${t['Note Chiusura'] ? `<div style="margin-top:6px;font-size:12px;color:var(--green);font-style:italic">✅ ${t['Note Chiusura']}</div>` : ''}
@@ -397,7 +397,9 @@ function renderCalendar() {
 
   const eventsByDate = {};
   state.tickets.filter(t => t['Data Schedulata']).forEach(t => {
-    const d = t['Data Schedulata'];
+    const raw = t['Data Schedulata'];
+    const parsed = new Date(raw);
+    const d = isNaN(parsed.getTime()) ? raw : `${parsed.getUTCFullYear()}-${String(parsed.getUTCMonth()+1).padStart(2,'0')}-${String(parsed.getUTCDate()).padStart(2,'0')}`;
     if (!eventsByDate[d]) eventsByDate[d] = [];
     eventsByDate[d].push(t);
   });
@@ -417,10 +419,11 @@ function renderCalendar() {
   }
 
   const monthTickets = state.tickets.filter(t => {
-    const d = t['Data Schedulata'] || '';
-    if (!d) return false;
-    const [y,m] = d.split('-');
-    return parseInt(m)-1 === state.calMonth && parseInt(y) === state.calYear;
+    const raw = t['Data Schedulata'] || '';
+    if (!raw) return false;
+    const parsed = new Date(raw);
+    if (isNaN(parsed.getTime())) return false;
+    return parsed.getUTCMonth() === state.calMonth && parsed.getUTCFullYear() === state.calYear;
   });
 
   return `
@@ -444,6 +447,13 @@ function renderCalendar() {
         ? `<div class="empty-state"><div class="empty-icon">📅</div><div>Nessun intervento schedulato questo mese</div></div>`
         : monthTickets.map(t => renderTicket(t, state.auth==='manutentore')).join('')}
     </div>`;
+}
+
+function formatDate(val) {
+  if (!val) return '';
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return val;
+  return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`;
 }
 
 function openLoginModal(role) {
