@@ -243,7 +243,9 @@ function renderMain() {
       ${state.tab === 'calendar' ? renderCalendar() : ''}
     </div>
     ${state.modal === 'schedule' ? renderScheduleModal() : ''}
-    ${state.modal === 'close' ? renderCloseModal() : ''}`;
+    ${state.modal === 'close' ? renderCloseModal() : ''}
+    ${state.modal === 'edit' ? renderEditModal() : ''}
+    ${state.modal === 'confirm-delete' ? renderConfirmDelete() : ''}`;
 }
 
 function renderNewTicket() {
@@ -314,9 +316,12 @@ function renderTicket(t, isManu) {
   const prio = (t['Priorità'] || '').toLowerCase();
   const badgePrio = prio === 'alta' ? 'badge-alta' : prio === 'media' ? 'badge-media' : 'badge-bassa';
   const badgeStato = stato === 'Aperto' ? 'badge-aperto' : stato === 'Schedulato' ? 'badge-schedulato' : 'badge-chiuso';
+  const isResp = state.auth === 'responsabile';
   let actions = '';
   if (isManu && stato === 'Aperto') actions = `<button class="btn btn-primary btn-sm" onclick="openSchedule('${t['ID']}')">📅 Schedula</button>`;
   if (isManu && stato === 'Schedulato') actions = `<button class="btn btn-primary btn-sm" onclick="openClose('${t['ID']}')">✅ Chiudi Commessa</button><button class="btn btn-ghost btn-sm" onclick="openSchedule('${t['ID']}')">✏️ Modifica</button>`;
+  if (isResp && stato !== 'Chiuso') actions = `<button class="btn btn-ghost btn-sm" onclick="openEditTicket('${t['ID']}')">✏️ Modifica</button><button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red)" onclick="confirmDelete('${t['ID']}')">🗑 Elimina</button>`;
+  if (isResp && stato === 'Chiuso') actions = `<button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red)" onclick="confirmDelete('${t['ID']}')">🗑 Elimina</button>`;
   return `
     <div class="ticket-item">
       <div class="ticket-header">
@@ -382,6 +387,53 @@ function renderCloseModal() {
         <div class="modal-actions">
           <button class="btn btn-ghost" onclick="closeModal()">Annulla</button>
           <button class="btn btn-primary" onclick="submitClose()">Chiudi Commessa ✅</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderEditModal() {
+  const t = state.tickets.find(t => t['ID'] === state.selectedTicket) || {};
+  return `
+    <div class="modal-overlay" onclick="closeModal()">
+      <div class="modal" onclick="event.stopPropagation()" style="width:380px">
+        <h3>✏️ Modifica Ticket</h3>
+        <p>Modifica i dati del ticket ${state.selectedTicket}</p>
+        <div class="form-row">
+          <div class="form-group">
+            <div class="form-label" style="margin-bottom:6px">Descrizione *</div>
+            <textarea style="width:100%;min-height:70px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;outline:none;resize:vertical" id="edit-desc">${t['Descrizione'] || ''}</textarea>
+          </div>
+          <div class="form-group">
+            <div class="form-label" style="margin-bottom:6px">Priorità *</div>
+            <select style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;outline:none;background:var(--surface);color:var(--text)" id="edit-prio">
+              <option value="Alta" ${t['Priorità']==='Alta'?'selected':''}>🔴 Alta</option>
+              <option value="Media" ${t['Priorità']==='Media'?'selected':''}>🟡 Media</option>
+              <option value="Bassa" ${t['Priorità']==='Bassa'?'selected':''}>🟢 Bassa</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <div class="form-label" style="margin-bottom:6px">Note</div>
+            <textarea style="width:100%;min-height:60px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;outline:none;resize:vertical" id="edit-note">${t['Note'] || ''}</textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" onclick="closeModal()">Annulla</button>
+          <button class="btn btn-primary" onclick="submitEdit()">Salva modifiche →</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderConfirmDelete() {
+  return `
+    <div class="modal-overlay" onclick="closeModal()">
+      <div class="modal" onclick="event.stopPropagation()">
+        <h3>🗑 Elimina Ticket</h3>
+        <p>Sei sicuro di voler eliminare il ticket <strong>${state.selectedTicket}</strong>? L'operazione non può essere annullata.</p>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" onclick="closeModal()">Annulla</button>
+          <button class="btn btn-primary" style="background:var(--red);border-color:var(--red)" onclick="submitDelete()">Elimina definitivamente</button>
         </div>
       </div>
     </div>`;
@@ -517,6 +569,30 @@ async function submitTicket() {
 
 function openSchedule(id) { state.selectedTicket = id; state.modal = 'schedule'; render(); }
 function openClose(id) { state.selectedTicket = id; state.modal = 'close'; render(); }
+function openEditTicket(id) { state.selectedTicket = id; state.modal = 'edit'; render(); }
+function confirmDelete(id) { state.selectedTicket = id; state.modal = 'confirm-delete'; render(); }
+
+async function submitEdit() {
+  const desc = document.getElementById('edit-desc')?.value?.trim();
+  const prio = document.getElementById('edit-prio')?.value;
+  const note = document.getElementById('edit-note')?.value?.trim();
+  if (!desc) { showToast('Inserisci una descrizione'); return; }
+  try {
+    const res = await fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'editTicket', id:state.selectedTicket, descrizione:desc, priorita:prio, note }) });
+    const d = await res.json();
+    if (d.success) { showToast('✅ Ticket modificato!'); closeModal(); loadTickets(); }
+    else showToast('Errore: ' + (d.error || 'riprova'));
+  } catch(e) { showToast('Errore. Riprova.'); }
+}
+
+async function submitDelete() {
+  try {
+    const res = await fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'deleteTicket', id:state.selectedTicket }) });
+    const d = await res.json();
+    if (d.success) { showToast('🗑 Ticket eliminato'); closeModal(); loadTickets(); }
+    else showToast('Errore: ' + (d.error || 'riprova'));
+  } catch(e) { showToast('Errore. Riprova.'); }
+}
 
 async function submitSchedule() {
   const data = document.getElementById('sched-data')?.value;
