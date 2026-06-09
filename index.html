@@ -299,7 +299,7 @@ function renderTickets() {
       </div>
       ${list.length === 0
         ? `<div style="color:var(--text-muted);font-size:13px;padding:12px 0 0">Nessun ticket in questa categoria</div>`
-        : list.map(t => renderTicket(t, isManu)).join('')}`;
+        : list.map(t => renderTicket(t, state.auth)).join('')}`;
   };
 
   return `
@@ -311,12 +311,13 @@ function renderTickets() {
       : renderSection('🔵 Aperti', open, true) + renderSection('🟡 Schedulati', sched, false) + renderSection('✅ Chiusi', closed, false)}`;
 }
 
-function renderTicket(t, isManu) {
+function renderTicket(t, role) {
   const stato = t['Stato'] || 'Aperto';
   const prio = (t['Priorità'] || '').toLowerCase();
   const badgePrio = prio === 'alta' ? 'badge-alta' : prio === 'media' ? 'badge-media' : 'badge-bassa';
   const badgeStato = stato === 'Aperto' ? 'badge-aperto' : stato === 'Schedulato' ? 'badge-schedulato' : 'badge-chiuso';
-  const isResp = state.auth === 'responsabile';
+  const isManu = role === 'manutentore';
+  const isResp = role === 'responsabile';
   let actions = '';
   if (isManu && stato === 'Aperto') actions = `<button class="btn btn-primary btn-sm" onclick="openSchedule('${t['ID']}')">📅 Schedula</button>`;
   if (isManu && stato === 'Schedulato') actions = `<button class="btn btn-primary btn-sm" onclick="openClose('${t['ID']}')">✅ Chiudi Commessa</button><button class="btn btn-ghost btn-sm" onclick="openSchedule('${t['ID']}')">✏️ Modifica</button>`;
@@ -497,7 +498,7 @@ function renderCalendar() {
       </div>
       ${monthTickets.length === 0
         ? `<div class="empty-state"><div class="empty-icon">📅</div><div>Nessun intervento schedulato questo mese</div></div>`
-        : monthTickets.map(t => renderTicket(t, state.auth==='manutentore')).join('')}
+        : monthTickets.map(t => renderTicket(t, state.auth)).join('')}
     </div>`;
 }
 
